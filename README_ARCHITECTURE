@@ -1,0 +1,65 @@
+# Exchange IMAP + OAuth2 AI-Pipeline (Python)
+
+Dieses Beispiel zeigt, wie eingehende E-Mails aus **Exchange Online** per **IMAP + OAuth2** abgeholt,
+durch eine **Pipeline** von KI-Komponenten (Platzhalter) angereichert und anschließend von einem
+**Controller** weiterverarbeitet werden.
+
+> Hinweis: Für IMAP in Exchange Online ist **Modern Authentication (OAuth2)** notwendig. Basic Auth ist deaktiviert.
+> Du benötigst eine App-Registrierung in Entra ID (Azure AD) mit den **Application Permissions**
+> `IMAP.AccessAsApp` (und ggf. `POP.AccessAsApp`). Außerdem benötigen Postfächer ggf. expliziten Consent.
+
+## Ordnerstruktur
+
+```
+src/
+  main.py
+  config.py
+  oauth.py
+  imap_worker.py
+  utils/email_utils.py
+  pipeline/
+    __init__.py
+    ai_extract_person.py
+    ai_extract_company.py
+    ai_predict_intention.py
+    ai_controller.py
+requirements.txt
+.env.example
+```
+
+## Schnellstart
+
+1. Python 3.10+ verwenden und Abhängigkeiten installieren:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. `.env` auf Basis von `.env.example` ausfüllen.
+
+3. Programm starten:
+
+   ```bash
+   python -m src.main
+   ```
+
+Die App pollt standardmäßig alle 15 Sekunden nach **UNSEEN** Mails. Für produktive Szenarien kannst du das Intervall
+reduzieren oder auf IMAP **IDLE** umstellen (siehe Kommentar in `imap_worker.py`).
+
+## Pipeline-Mechanik
+
+Jede Komponente erhält ein gemeinsames `data: dict` sowie das geparste `email_obj`. Die Komponente **ergänzt** Daten
+und gibt das `data` zurück. Reihenfolge:
+
+1. `ai_extract_person.process(data, email_obj)`
+2. `ai_extract_company.process(data, email_obj)`
+3. `ai_predict_intention.process(data, email_obj)`
+4. `ai_controller.handle(data, email_obj)` (finale Weiterverarbeitung)
+
+Die drei *ai-extract*-Dateien sind Platzhalter: Hier kannst du dein LLM / deine Heuristiken integrieren.
+
+## Sicherheit & Betrieb
+
+- Tokens laufen ab → automatisches Refresh ist implementiert.
+- Stabilität: Reconnect bei Netzwerkfehlern/Timeouts mit Backoff.
+- Compliance: Prüfe rechtliche Rahmenbedingungen, Logging, PII-Handling etc.

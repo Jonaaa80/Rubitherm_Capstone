@@ -1,191 +1,154 @@
-# Template Repo for ML Project
+# Rubitherm Capstone
 
-This template repo will give you a good starting point for your second project. Besides the files used for creating a virtual environment, you will find a simple example of how to build a simple model in a python script. This is maybe the simplest way to do it. We train a simple model in the jupyter notebook, where we select only some features and do minimal cleaning. The output is then stored in simple python scripts.
+![Page 01](./images/RT_1.png)
 
-The data used for this is: [coffee quality dataset](https://github.com/jldbc/coffee-quality-database).
+![Page 02](./images/RT_2.png)
 
-In this README, you also find: 
-* [How to set up your environment](#set-up-your-environment)
-* [How to use this template repo](#usage)
-* [How to set up a Kanban board on github](#set-up-a-kanban-board-on-github)
-* [How to automatically format your Jupyter notebook according to Pep8](#pep-8-integration-for-jupyter-notebook)
+![Page 03](./images/RT_3.png)
 
+![Page 04](./images/RT_4.png)
 
----
-## Set up your Environment
+![Page 05](./images/RT_5.png)
 
+![Page 06](./images/RT_6.png)
 
-
-### **`macOS`** type the following commands : 
-
-
-
-- For installing the virtual environment and the required package you can either follow the commands:
-
-    ```BASH
-    pyenv local 3.11.3
-    python -m venv .venv
-    source .venv/bin/activate
-    pip install --upgrade pip
-    pip install -r requirements.txt
-    ```
-Or ....
--  use the [Makefile](Makefile) and run `make setup` or install it manually with the following commands:
-
-     ```BASH
-    make setup
-    ```
-    After that active your environment by following commands:
-    ```BASH
-    source .venv/bin/activate
-    ```
-
-### **`WindowsOS`** type the following commands :
-
-- Install the virtual environment and the required packages by following commands.
-
-   For `PowerShell` CLI :
-
-    ```PowerShell
-    pyenv local 3.11.3
-    python -m venv .venv
-    .venv\Scripts\Activate.ps1
-    pip install --upgrade pip
-    pip install -r requirements.txt
-    ```
-
-    For `Git-bash` CLI :
-  
-    ```BASH
-    pyenv local 3.11.3
-    python -m venv .venv
-    source .venv/Scripts/activate
-    pip install --upgrade pip
-    pip install -r requirements.txt
-    ```
-
-    **`Note:`**
-    If you encounter an error when trying to run `pip install --upgrade pip`, try using the following command:
-    ```Bash
-    python.exe -m pip install --upgrade pip
-    ```
-
-
----
-## Usage
-
-In order to train the model and store test data in the data folder and the model in models run:
-
-**`Note`**: Make sure your environment is activated.
-
-```bash
-python example_files/train.py  
-```
-
-In order to test that predict works on a test set you created run:
-
-```bash
-python example_files/predict.py models/linear_regression_model.sav data/X_test.csv data/y_test.csv
-```
-
-### Limitations
-
-Development libraries are part of the production environment, normally these would be separate as the production code should be as slim as possible.
+## Project Description
+Rubitherm Capstone is a machine learning project designed to classify emails into two categories: **offer** or **request**. The project leverages natural language processing and custom ML models to extract relevant information and predict the intention behind incoming emails, facilitating automated email handling.
 
 ---
 
-## Set up a Kanban board on github
+## Directory Structure
 
-Go to ML-Project Template.
+- **data/**  
+  Contains the raw and processed email datasets. This directory should include annotated emails with labels indicating whether they are offers or requests.
 
-1. Click on "Use this Template" (Blue button)
-![alt text](./images/step_1a_new.png)
+- **models/**  
+  Stores trained machine learning models and associated artifacts. Models saved here can be loaded for inference or further training.
 
-2. Create new repository with relevant name, the owner should be your own account and **not** Spiced. 
-![alt text](./images/step_2_new.png)
+- **notebooks/**  
+  Jupyter notebooks for exploratory data analysis, model development, training, and evaluation.
 
-3. In your newly create repo, navigate to "Projects", and then click on "Link a project" (blue button). Normally you don't have created a project yet, so you can click the arrow navigation to create project on your profile. This project can be added at the end to your repository.
-![alt text](./images/add_project_new.png)
-
-
-4.  You will be guided to your profiles projects and it will be shown a create project window. Choose "board" view and **not** "table" view.
- ![alt text](./images/choose_board.png)
-5. Now change the name of your board, to match that of your chosen ML project. Then click "Create project" blue button. Great you create Kanban Board
-![alt text](./images/create_project_new.png)
-
-6. Next, assign rights to all your team members by clicking on the 3 dots on the top right of the board, and then go to "Settings".
-![alt text](./images/kanban_settings.png)
-
-
-7. Next, click on "Manage Access". Add your team mates by Searching for their github handle in the search window.Change their Role from ‘Write’ to ‘Admin’. Click on the blue button “Invite” to add them. Repeat for all team members.
-![alt text](./images/team_access_new.png
-)
-
-8. Next,go back to the kanban board and at the bottom  add action items with the relevant name e.g. “load data”, "get statistics", etc.
-![alt text](./images/load_data_item.png
-)
-
-
-9. Convert added item to issue by clicking on the 3 dots on the particular added item.
-![alt text](./images/convert_to_issue.png
-)
-
-10. Then select the repo you created  for the issue to be added. (Select the project repo example “my-project-name”)
-![alt text](./images/select_repo.png
-)
-
-11. When in project repo, Go to issues, then go to milestones. 
-![alt text](./images/to_milestones.png
-)
-
-12. Click on ”New milestone”.
-
-13. Give the milestone a due date and description as per the example provided by the coaches. Add description of: 
-
-    A) What needs to be completed to be done with the milestone
-
-    B) The definition of done: what will your result look like when you have completed the milestone? (check the provided format)
-![alt text](./images/new_milestone.png)
-
-14. Now navigate to "issues".
-
-15. Assign issues to milestones 
-![alt text](./images/milestone_to_issue_new.png)
-
-16. Give it assignees (people who will work on the task). 
-![alt text](./images/milestone_to_someone.png)
-
-### Optional: Add workflows
-
-Workflows can help you keep your kanban board automatically on track. 
-
-Select the project created in the steps above.  
-
-Click on the 3 dots to the far right of the board (...)
-
-Select workflow as the first option. 
-
-Activate the ones you feel necessary to your project
-
-Go back to your project repository (fraud detection))
-
+- **src/**  
+  The main source code for the project, organized into subdirectories:
+  - **pipeline/**  
+    Contains the modular pipeline components such as `ai_extract_person`, `ai_extract_company`, `ai_predict_intention`, and `ai_controller` that process emails and perform predictions.
+  - **tests/**  
+    Unit and integration tests for the codebase. Includes `.eml` test email files and optional `.expected.json` files for assertion testing.
+  - **utils/**  
+    Utility scripts and helper functions used throughout the project.
 
 ---
 
-## PEP 8 integration for Jupyter Notebook
+## Setup Instructions
 
-This automatically formats all subsequent cells according to PEP 8 standards, once they are being run. Here is how to do it:
+### Prerequisites
+- Python 3.8 or higher
+- `pyenv` for Python version management (optional but recommended)
+- `make` utility (optional for convenience)
 
-1. Go into your repo.
-2. After activating your virtual environment, type into your terminal
-```
-pip install jupyter-black
-```
-3. Open your jupyter notebook and add at the beginning the following piece of code:
-```
-%load_ext jupyter_black
-```
-4. Run it.
-5. Now any cells you run afterwards should be formatted according to PEP 8, as understood by Black.
+### Environment Setup
 
+#### Using pyenv and Makefile (Linux/Mac)
+1. Install `pyenv` if not already installed.
+2. Run `make setup` to create a virtual environment and install dependencies.
+3. Activate the environment with `pyenv activate rubitherm-capstone` or follow instructions printed by the Makefile.
 
+#### Manual Setup (Linux/Mac)
+1. Install Python 3.8+.
+2. Create a virtual environment:
+   ```
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+3. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+#### Manual Setup (Windows)
+1. Install Python 3.8+.
+2. Create and activate a virtual environment:
+   ```
+   python -m venv venv
+   venv\Scripts\activate
+   ```
+3. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+---
+
+## Data
+
+The project expects an email dataset consisting of `.eml` files annotated with labels indicating whether each email is an offer or a request. These files should be placed in the `data/` directory. Proper annotation is crucial for supervised model training and evaluation.
+
+---
+
+## Model Development
+
+Model training and experimentation are conducted within the `notebooks/` directory. Use these notebooks to preprocess data, train models, and evaluate performance. Once trained, save the models and related artifacts to the `models/` directory for deployment and inference.
+
+---
+
+## Pipeline Components
+
+The project pipeline consists of several modular components located in `src/pipeline/`:
+
+- **ai_extract_person**: Extracts personal information from emails.
+- **ai_extract_company**: Extracts company-related information.
+- **ai_predict_intention**: Predicts whether an email is an offer or a request using trained ML models.
+- **ai_controller**: Orchestrates the execution of the pipeline components in sequence.
+
+The pipeline can be executed from the command line via the entry point:
+
+```
+python -m src.main
+```
+
+---
+
+## Testing
+
+Test emails in `.eml` format are located in `src/tests/emails/`. Each test email may have an optional `.expected.json` file containing expected outputs for assertions.
+
+Tests are implemented using Python's `unittest` framework and can also be run with `pytest` for convenience.
+
+To run tests:
+
+```
+python -m unittest discover src/tests
+```
+
+or
+
+```
+pytest src/tests
+```
+
+---
+
+## Usage Example
+
+1. Add new `.eml` email files to the `data/` directory.
+2. Run the pipeline to process and classify emails:
+
+   ```
+   python -m src.main
+   ```
+
+3. To retrain models with updated data, use the notebooks in `notebooks/` and save the resulting models to `models/`.
+
+---
+
+## Limitations & Next Steps
+
+- Current models may have limited accuracy depending on dataset size and quality.
+- Pipeline components are modular but may require fine-tuning for edge cases.
+- Future work includes expanding dataset, improving NLP components, and integrating with email servers for real-time processing.
+
+---
+
+## License
+
+This project is licensed under the [Insert License Name Here].
