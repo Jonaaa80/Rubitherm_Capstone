@@ -1,5 +1,17 @@
 # Rubitherm Capstone
 
+![Page 01](./images/RT_1.png)
+
+![Page 02](./images/RT_2.png)
+
+![Page 03](./images/RT_3.png)
+
+![Page 04](./images/RT_4.png)
+
+![Page 05](./images/RT_5.png)
+
+![Page 06](./images/RT_6.png)
+
 ## Project Description
 Rubitherm Capstone is a machine learning project designed to classify emails into two categories: **offer** or **request**. The project leverages natural language processing and custom ML models to extract relevant information and predict the intention behind incoming emails, facilitating automated email handling.
 
