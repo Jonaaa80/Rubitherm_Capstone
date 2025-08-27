@@ -3,19 +3,20 @@ import time
 import base64
 import ssl
 from typing import List, Tuple, Optional
-from .oauth import OAuthTokenProvider
-from .config import IMAP_HOST, IMAP_PORT, IMAP_USER, POLL_INTERVAL, CONNECT_TIMEOUT, READ_TIMEOUT
+from .oauth import OAuthTokenProvider  # only used for XOAUTH2
+from .config import IMAP_HOST, IMAP_PORT, IMAP_USER, IMAP_PASSWORD, AUTH_METHOD, POLL_INTERVAL, CONNECT_TIMEOUT, READ_TIMEOUT
 from .utils.email_utils import parse_email
 
 class IMAPPoller:
     """Ein robuster IMAP-Poller, der UNSEEN Mails findet und verarbeitet.
     Hinweis: Für echte Near-Realtime kannst du auf IDLE umstellen (siehe Kommentar unten).
+    Unterstützt AUTH_METHOD=LOGIN (Benutzer/Passwort) und AUTH_METHOD=XOAUTH2.
     """
 
     def __init__(self):
-        self.token_provider = OAuthTokenProvider()
         self.conn: Optional[imaplib.IMAP4_SSL] = None
         self._last_seen_uids = set()
+        self.token_provider = OAuthTokenProvider() if AUTH_METHOD.upper() == "XOAUTH2" else None
 
     def _auth_string(self, access_token: str) -> str:
         # XOAUTH2: base64("user=...\1auth=Bearer <token>\1\1")
@@ -29,11 +30,21 @@ class IMAPPoller:
 
     def _authenticate(self) -> None:
         assert self.conn is not None
-        access_token = self.token_provider.get_token()
-        xoauth2 = self._auth_string(access_token)
-        typ, data = self.conn.authenticate("XOAUTH2", lambda x: xoauth2)
-        if typ != "OK":
-            raise RuntimeError(f"IMAP XOAUTH2 auth failed: {typ} {data}")
+        method = AUTH_METHOD.upper()
+        if method == "XOAUTH2":
+            access_token = self.token_provider.get_token()
+            xoauth2 = self._auth_string(access_token)
+            typ, data = self.conn.authenticate("XOAUTH2", lambda x: xoauth2)
+            if typ != "OK":
+                raise RuntimeError(f"IMAP XOAUTH2 auth failed: {typ} {data}")
+        elif method == "LOGIN":
+            print(IMAP_USER)
+            print(IMAP_PASSWORD)
+            typ, data = self.conn.login(IMAP_USER, IMAP_PASSWORD)
+            if typ != "OK":
+                raise RuntimeError(f"IMAP LOGIN auth failed: {typ} {data}")
+        else:
+            raise RuntimeError(f"Unsupported AUTH_METHOD: {AUTH_METHOD}")
         typ, _ = self.conn.select("INBOX")
         if typ != "OK":
             raise RuntimeError("Cannot select INBOX")
