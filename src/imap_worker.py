@@ -38,8 +38,6 @@ class IMAPPoller:
             if typ != "OK":
                 raise RuntimeError(f"IMAP XOAUTH2 auth failed: {typ} {data}")
         elif method == "LOGIN":
-            print(IMAP_USER)
-            print(IMAP_PASSWORD)
             typ, data = self.conn.login(IMAP_USER, IMAP_PASSWORD)
             if typ != "OK":
                 raise RuntimeError(f"IMAP LOGIN auth failed: {typ} {data}")
@@ -93,10 +91,43 @@ class IMAPPoller:
 
     def fetch_email_by_uid(self, uid: bytes) -> bytes:
         assert self.conn is not None
-        typ, data = self.conn.uid("fetch", uid, "(RFC822)")
-        if typ != "OK" or not data or not isinstance(data[0], tuple):
-            raise RuntimeError(f"Fetch failed for UID {uid!r}")
-        return data[0][1]
+
+        def _extract_bytes(fetch_data):
+            # Server responses vary: look for (tuple) entries with bytes payload
+            if not fetch_data:
+                return None
+            for item in fetch_data:
+                if isinstance(item, tuple) and len(item) >= 2 and isinstance(item[1], (bytes, bytearray)):
+                    return item[1]
+            return None
+
+        def _try_fetch(u: bytes):
+            typ, data = self.conn.uid("fetch", u, "(BODY.PEEK[])")
+            if typ == "OK":
+                payload = _extract_bytes(data)
+                if payload:
+                    return payload
+            # Some servers return RFC822; try fallback
+            typ, data = self.conn.uid("fetch", u, "(RFC822)")
+            if typ == "OK":
+                payload = _extract_bytes(data)
+                if payload:
+                    return payload
+            return None
+
+        # First attempt
+        raw = _try_fetch(uid)
+        if raw:
+            return raw
+
+        # Re-select INBOX and retry (message may have been moved/flag-changed)
+        self.conn.select("INBOX")
+        raw = _try_fetch(uid)
+        if raw:
+            return raw
+
+        # Give up; caller may choose to continue to next UID
+        raise RuntimeError(f"Fetch failed for UID {uid!r}")
 
     def loop(self, handler):
         try:
@@ -105,7 +136,11 @@ class IMAPPoller:
             while True:
                 self._refresh_auth_if_needed()
                 for uid in self.fetch_unseen_uids():
-                    raw = self.fetch_email_by_uid(uid)
+                    try:
+                        raw = self.fetch_email_by_uid(uid)
+                    except Exception:
+                        # Skip this UID if it vanished or couldn't be fetched
+                        continue
                     email_obj = parse_email(raw)
                     handler(email_obj)
                 time.sleep(POLL_INTERVAL)
