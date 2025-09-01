@@ -12,7 +12,9 @@ def handle_email(email_obj):
             "subject": original.get("Subject"),
             "message_id": original.get("Message-ID"),
             "date": original.get("Date"),
-        }
+        },
+        "title": original.get("Subject"),
+        "body": extract_bodies(original)[0],
     }
 
     # Pipeline
