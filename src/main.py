@@ -1,0 +1,34 @@
+from .imap_worker import IMAPPoller
+from .pipeline import ai_web, ai_extract_person, ai_extract_company, ai_predict_intention, ai_controller
+from .utils.email_utils import extract_bodies, get_effective_message 
+
+def handle_email(email_obj):
+    original = get_effective_message(email_obj)
+
+    data = {
+        "meta": {
+            "from": original.get("From"),
+            "to": original.get("To"),
+            "subject": original.get("Subject"),
+            "message_id": original.get("Message-ID"),
+            "date": original.get("Date"),
+        },
+        "title": original.get("Subject"),
+        "body": extract_bodies(original)[0],
+    }
+
+    # Pipeline
+    data = ai_extract_person.process(data, original)
+    data = ai_extract_company.process(data, original)
+    data = ai_predict_intention.process(data, original)
+    data = ai_web.process(data, original)
+
+    # Final
+    ai_controller.handle(data, original)
+
+def main():
+    poller = IMAPPoller()
+    poller.loop(handle_email)
+
+if __name__ == "__main__":
+    main()
