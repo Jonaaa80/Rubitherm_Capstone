@@ -2,6 +2,7 @@ from email import message_from_bytes
 from email.message import Message
 from typing import Tuple, Optional
 from email.utils import parseaddr
+import re
 
 
 def parse_email(raw_bytes: bytes) -> Message:
@@ -85,29 +86,86 @@ def extract_original_from_header(msg: Message) -> Optional[str]:
                 return val
     return None
 
+# Heuristic: extract original sender from quoted header block in body (Outlook inline-forward)
+def extract_original_from_body(msg: Message) -> Optional[str]:
+    """Tries to recover the original From from an inline-forward quoted header block.
+    Looks for lines starting with 'From:' or 'Von:' and extracts `Name <addr>` or `addr`.
+    Returns the last matching quoted header block found (useful for cascaded forwards where
+    the deepest/last block corresponds to the most recent original message in the chain).
+    Returns a raw header-like string (e.g., 'Alice <alice@example.com>') or None.
+    """
+    try:
+        from .email_utils import extract_bodies  # local import guard if structure changes
+    except Exception:
+        # fallback: assume same module
+        pass
+    plain, html = extract_bodies(msg)
+
+    def strip_html(h: Optional[str]) -> str:
+        if not h:
+            return ""
+        # very light tag removal for header block detection
+        return re.sub(r"<[^>]+>", "", h)
+
+    text = plain or strip_html(html)
+    if not text:
+        return None
+
+    # Normalize line breaks and whitespace
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+
+    # Patterns: match
+    #   From: Name <addr>
+    #   From: addr
+    #   Von:  Name <addr>
+    #   Von:  addr
+    patterns = [
+        re.compile(r"^(?:From|Von)\s*:\s*(.*?)\s*<([^>]+)>", re.IGNORECASE),
+        re.compile(r"^(?:From|Von)\s*:\s*<?([^\s>@]+@[^\s>]+)>?", re.IGNORECASE),
+    ]
+
+    last_match = None
+    for line in lines:
+        for pat in patterns:
+            m = pat.search(line)
+            if m:
+                if len(m.groups()) == 2:
+                    name, addr = m.group(1).strip(), m.group(2).strip()
+                    last_match = f"{name} <{addr}>" if name else addr
+                else:
+                    addr = m.group(1).strip()
+                    last_match = addr
+                # continue scanning to prefer the last header block in cascaded forwards
+    return last_match
+
 def get_effective_message(msg: Message) -> Message:
     """Prefer the embedded original message (message/rfc822). If not present,
-    try Apple Mail/Gmail forwarding headers to recover the original sender.
-    If such a header is found, overwrite From with original and keep the
-    forwarder's address in X-Forwarder-From for downstream use.
+    try forwarding/redirect headers (e.g., X-Google-Original-From). If that
+    fails, heuristically parse Outlook inline-forward quoted blocks in the body.
+
+    If an original sender is detected, overwrite `From` with it and preserve
+    the forwarder address in `X-Forwarder-From`. Also mirror to `X-Effective-From`.
     """
     inner = extract_embedded_rfc822(msg)
     if inner:
         return inner
 
+    # 1) Dedicated headers from providers/clients
     original_from = extract_original_from_header(msg)
+    if not original_from:
+        # 2) Outlook inline-forward body heuristic
+        original_from = extract_original_from_body(msg)
+
     if original_from:
-        # preserve the forwarder address
         forwarder = msg.get("From")
         if forwarder and not msg.get("X-Forwarder-From"):
             msg["X-Forwarder-From"] = forwarder
-        # replace From with the detected original sender
         try:
             if msg.get("From") is not None:
                 del msg["From"]
         except Exception:
             pass
         msg["From"] = original_from
-        # also expose explicitly for consumers if needed
         msg["X-Effective-From"] = original_from
+
     return msg
