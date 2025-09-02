@@ -1,10 +1,13 @@
+from .utils.email_parser import parse_email_body
 from .imap_worker import IMAPPoller
-from .pipeline import ai_web, ai_extract_person, ai_extract_company, ai_predict_intention, ai_controller
+from .pipeline import ai_web, ai_extract_person, ai_extract_company, ai_predict_intention, ai_controller, ai_email_parser
 from .utils.email_utils import extract_bodies, get_effective_message 
 
 def handle_email(email_obj):
     original = get_effective_message(email_obj)
 
+    bodies = extract_bodies(original) or []
+    body = (bodies[0] if bodies else None) or ""
     data = {
         "meta": {
             "from": original.get("From"),
@@ -14,10 +17,14 @@ def handle_email(email_obj):
             "date": original.get("Date"),
         },
         "title": original.get("Subject"),
-        "body": extract_bodies(original)[0],
+        "body": body,
     }
 
+    parsed = parse_email_body(body)
+    data["parsed"] = parsed
+
     # Pipeline
+    data = ai_email_parser.process(data, original)
     data = ai_extract_person.process(data, original)
     data = ai_extract_company.process(data, original)
     data = ai_predict_intention.process(data, original)
