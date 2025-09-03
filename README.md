@@ -57,8 +57,8 @@ Rubitherm Capstone is a machine learning project designed to classify emails int
 1. Install Python 3.8+.
 2. Create a virtual environment:
    ```
-   python3 -m venv venv
-   source venv/bin/activate
+   python3 -m venv .venv
+   source .venv/bin/activate
    ```
 3. Install dependencies:
    ```
@@ -70,11 +70,11 @@ Rubitherm Capstone is a machine learning project designed to classify emails int
 2. Create and activate a virtual environment:
    ```
    python -m venv venv
-   venv\Scripts\activate
+    source ./venv/Scripts/activate
    ```
 3. Install dependencies:
    ```
-   pip install -r requirements.txt
+   pip install -r requirements_windows.txt
    ```
 
 ---
