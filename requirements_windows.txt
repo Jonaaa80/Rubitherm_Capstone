@@ -1,0 +1,13 @@
+ipykernel
+scikit-learn==1.5.1
+pandas==2.2.2
+seaborn==0.13.2
+statsmodels==0.14.2
+jupyterlab==4.2.3
+matplotlib==3.7.1
+numpy==1.24.3
+python-dotenv==1.0.1
+requests
+sentence_transformers
+transformers
+ollama
