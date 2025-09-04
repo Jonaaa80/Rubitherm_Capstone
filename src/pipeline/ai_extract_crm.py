@@ -319,33 +319,37 @@ def process(data: dict, email_obj: Message) -> dict:
     else:
         email_body = email_obj.get_payload(decode=True).decode('utf-8', errors='ignore')
 
-    # Use our primary extraction function
+
+    #extracted_data = extract_email_data(data.get("body", ""))
     extracted_data = extract_email_data(email_body)
+    
+
+
 
     # Merge extracted data into the main 'data' dictionary
     # Create the 'body' section as requested
-    data.setdefault("body", {})
-    data["body"]["first_name"] = extracted_data["extracted_data"]["first_name"]
-    data["body"]["last_name"] = extracted_data["extracted_data"]["last_name"]
-    data["body"]["company"] = extracted_data["extracted_data"]["company"]
-    data["body"]["customer_phone"] = extracted_data["extracted_data"]["customer_phone"]
-    data["body"]["email"] = extracted_data["extracted_data"]["email"]
-    data["body"]["roles"] = extracted_data["extracted_data"]["roles"]
-    data["body"]["address"] = extracted_data["extracted_data"]["address"]
-    data["body"]["website"] = extracted_data["extracted_data"]["website"]
-    data["body"]["tags"] = extracted_data["extracted_data"]["tags"]
-    data["body"]["message"] = extracted_data["extracted_data"].get("message") # Add 'message'
-    data["body"]["extracted_by"] = extracted_data.get("extracted_by") # Add 'extracted_by'    
-    
-    # naive Heuristik
-    data.setdefault("person", {})
-    data["person"].setdefault("sender_raw", sender)
-    if "<" in sender and ">" in sender:
-        name = sender.split("<")[0].strip().strip('\'"')
-        data["person"]["name_guess"] = name or data["person"].get("name_guess")
+    #data.setdefault("ai_extract_crm", {})
+    #data["ai_extract_crm"]['extracted_data'].update(extracted_data.get("extracted_data", {}))
+    #data["ai_extract_crm"]['extracted_by'].update(extracted_data.get("extracted_data", {}).get("extracted_by",{}))
 
 
-    # subject-based guess
-    if "bewerbung" in subject.lower():
-        data["person"]["context"] = "job_application"
+    crm = data.setdefault("ai_extract_crm", {})
+    # 1) extracted_data (Inhalte) mergen
+    inner = extracted_data.get("extracted_data", {})
+    if isinstance(inner, dict):
+        crm.setdefault("extracted_data", {}).update(inner)
+
+    # 2) extracted_by ermitteln (erst Top-Level, sonst nested in extracted_data)
+    extracted_by = extracted_data.get("extracted_by")
+    if extracted_by is None and isinstance(inner, dict):
+        extracted_by = inner.get("extracted_by")
+
+    # Accept either a string (common in our extractors) or a dict
+    if isinstance(extracted_by, dict):
+        crm["extracted_by"] = {**crm.get("extracted_by", {}), **extracted_by}
+    elif isinstance(extracted_by, str):
+        crm["extracted_by"] = extracted_by
+    else:
+        # fallback for older extractors: name not provided
+        crm.setdefault("extracted_by", "ai_extract_crm")
     return data
