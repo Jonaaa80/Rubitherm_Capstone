@@ -1,5 +1,5 @@
 from email.message import Message
-from ..utils.email_utils import extract_bodies
+# from ..utils.email_utils import extract_bodies
 import requests
 from bs4 import BeautifulSoup
 from transformers import pipeline
@@ -16,8 +16,8 @@ except ImportError:
     JS_RENDER_AVAILABLE = False
 
 # Load local summarizer
-# summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
-summarizer = pipeline("summarization", model="t5-small")
+summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+# summarizer = pipeline("summarization", model="t5-small")
 # -------------------------------
 # 1. Scrape Website Text
 # -------------------------------
@@ -105,8 +105,20 @@ def analyze_company(url):
 
 
 def process(data: dict, email_obj: Message) -> dict:
-    plain, html = extract_bodies(email_obj)
-    text = (plain or html or "").lower()
-    data.setdefault("website", "sumarize")
-
+    # plain, html = extract_bodies(email_obj)
+    if 'websites' in data:
+        websites = data['websites']
+    else:
+        websites = ['https://www.asml.com', 'https://www.liwest.at', 'https://www.novem.com', 'https://www.steinhaus.net',
+                    'https://www.ost.ch', 'https://www.audi.de', 'https://www.landpack.de', 'https://www.schaumaplast.de',
+                    'https://www.zukunfts.haus', 'https://www.googlemail.com', 'https://www.federation.edu.au']
+    websites_summary = []
+    for website in websites:
+        summary = analyze_company(website)
+        websites_summary.append((website, summary))
+    data.setdefault('summary', websites_summary)
+    print(data)
     return data
+
+
+process({}, {})
