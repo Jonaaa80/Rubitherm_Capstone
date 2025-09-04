@@ -6,6 +6,7 @@ from io import StringIO
 import json
 
 from src.main import handle_email
+from src.utils.data_collector import collect_and_write
 
 
 EMAIL_DIR = Path(__file__).parent / "emails"  # src/tests/emails
@@ -53,6 +54,7 @@ class TestEmailPipelineFromFiles(unittest.TestCase):
         eml_files = sorted(EMAIL_DIR.glob("*.eml"))
         self.assertTrue(eml_files, f"Keine .eml-Dateien in {EMAIL_DIR}")
 
+        collected = []
         for eml_path in eml_files:
             with self.subTest(email=eml_path.name):
                 msg = load_eml(eml_path)
@@ -91,6 +93,8 @@ class TestEmailPipelineFromFiles(unittest.TestCase):
                                         f"{ctx}.{k} Erwartet {v!r}, erhalten {got[k]!r}"
                                     )
                         assert_subset(expected, data, "$")
+                collected.append(data)
+        collect_and_write(collected, ["ai_email_parser.body_window", "ai_email_parser.signature"], "test_output.csv")
 
 
 if __name__ == "__main__":

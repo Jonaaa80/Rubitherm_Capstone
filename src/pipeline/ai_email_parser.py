@@ -3,6 +3,31 @@ import json
 from pathlib import Path
 from email.message import Message
 import subprocess
+import time
+from typing import Optional
+
+# Reusable HTTP session for Ollama
+try:
+    import requests  # already in requirements
+    _REQ_AVAILABLE = True
+except Exception:
+    requests = None  # type: ignore
+    _REQ_AVAILABLE = False
+
+_OLLAMA_SESSION: Optional["requests.Session"] = None  # type: ignore[name-defined]
+
+
+def _get_ollama_session():
+    global _OLLAMA_SESSION
+    if not _REQ_AVAILABLE:
+        return None
+    if _OLLAMA_SESSION is None:
+        try:
+            _OLLAMA_SESSION = requests.Session()  # type: ignore
+        except Exception:
+            _OLLAMA_SESSION = None
+    return _OLLAMA_SESSION
+
 
 def _read_prompt_file() -> tuple[str, dict]:
     diag = {}
@@ -43,15 +68,56 @@ def _robust_json_parse(output: str) -> dict:
     raise json.JSONDecodeError("No JSON object could be decoded", output, 0)
 
 
-def _call_ollama(prompt: str, model: str, timeout: int = 120) -> tuple[int, str, str]:
-    proc = subprocess.run(
-        ["ollama", "run", model],
-        input=prompt,
-        capture_output=True,
-        text=True,
-        timeout=timeout
-    )
-    return proc.returncode, proc.stdout, proc.stderr
+def _call_ollama_generate(prompt: str, model: str, timeout: int = 120) -> tuple[int, str, str]:
+    """Call a running Ollama instance via HTTP /api/generate to keep the model warm.
+
+    Returns (returncode, stdout, stderr). If HTTP fails and subprocess is available,
+    falls back to `ollama run` for resiliency.
+    """
+    api_url = os.getenv("OLLAMA_API_URL", "http://127.0.0.1:11434/api/generate")
+    keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "1h")  # keep model in memory
+    stream = False  # we want a single JSON response
+
+    sess = _get_ollama_session()
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": stream,
+        "keep_alive": keep_alive,
+    }
+    headers = {"Content-Type": "application/json"}
+
+    # Try HTTP first
+    if sess is not None:
+        try:
+            t0 = time.time()
+            resp = sess.post(api_url, json=payload, headers=headers, timeout=timeout)  # type: ignore
+            dt = time.time() - t0
+            if resp.status_code == 200:
+                try:
+                    data = resp.json()
+                    text = data.get("response", "")
+                    return 0, text, f"http_ok dt={dt:.2f}s"
+                except Exception as je:
+                    return 1, "", f"http_json_error: {je}"
+            else:
+                return 1, "", f"http_status={resp.status_code}: {resp.text[:300]}"
+        except Exception as he:
+            # fall back to subprocess if available
+            pass
+
+    # Fallback: subprocess
+    try:
+        proc = subprocess.run(
+            ["ollama", "run", model],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return proc.returncode, proc.stdout, proc.stderr
+    except Exception as se:
+        return 1, "", f"subprocess_error: {se}"
 
 
 def process(data: dict, email_obj: Message) -> dict:
@@ -100,16 +166,17 @@ def process(data: dict, email_obj: Message) -> dict:
     if recipient:
         full_prompt += f"\n\nfor_recipient: {recipient}"
     debug["final_prompt_len"] = len(full_prompt)
+    debug["api_url"] = os.getenv("OLLAMA_API_URL", "http://127.0.0.1:11434/api/generate")
 
     # Choose model (env override) and call Ollama
     model = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
     rc, out, err = -1, "", ""
     try:
-        rc, out, err = _call_ollama(full_prompt, model)
+        rc, out, err = _call_ollama_generate(full_prompt, model)
         debug.update({"model": model, "returncode": rc, "stderr": err[:500], "stdout_head": out[:500]})
         if rc != 0 or not out.strip():
             # fallback to llama3
-            rc2, out2, err2 = _call_ollama(full_prompt, "llama3")
+            rc2, out2, err2 = _call_ollama_generate(full_prompt, "llama3")
             debug.update({"fallback_model": "llama3", "fallback_returncode": rc2, "fallback_stderr": err2[:500], "fallback_stdout_head": out2[:500]})
             if rc2 == 0 and out2.strip():
                 out, err, rc = out2, err2, rc2
