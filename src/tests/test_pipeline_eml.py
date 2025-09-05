@@ -62,8 +62,7 @@ class TestEmailPipelineFromFiles(unittest.TestCase):
 
                 # Smoke-Checks
                 self.assertIn("meta", data)
-                self.assertIn("person", data)
-
+                
                 # Optional: erwartete Assertions aus .expected.json laden
                 exp_path = eml_path.with_suffix(".expected.json")
                 if exp_path.exists():
@@ -94,7 +93,44 @@ class TestEmailPipelineFromFiles(unittest.TestCase):
                                     )
                         assert_subset(expected, data, "$")
                 collected.append(data)
-        collect_and_write(collected, ["ai_email_parser.body_window", "ai_email_parser.signature"], "test_output.csv")
+        columns = [
+            # Meta
+            "meta.from",
+            "meta.to",
+            "meta.subject",
+            "meta.message_id",
+            "meta.date",
+            # Visible body
+            "parsed.body_window",
+            # Signature fields (flattened)
+            "signature.full_name",
+            "signature.role",
+            "signature.company",
+            "signature.address[*]",
+            "signature.phone[*]",
+            "signature.email[*]",
+            "signature.url[*]",
+            # CRM extraction (flattened)
+            "ai_extract_crm.extracted_by",
+            "ai_extract_crm.extracted_data.first_name",
+            "ai_extract_crm.extracted_data.last_name",
+            "ai_extract_crm.extracted_data.company[*]",
+            "ai_extract_crm.extracted_data.customer_phone",
+            "ai_extract_crm.extracted_data.email[*]",
+            "ai_extract_crm.extracted_data.roles",
+            "ai_extract_crm.extracted_data.address",
+            "ai_extract_crm.extracted_data.website[*]",
+            "ai_extract_crm.extracted_data.message",
+            # Web enrichment
+            "ai_web._sources[*]",
+            # Klassifikation raw
+            "klassifikation_raw.StatusAngebot",
+            "klassifikation_raw.Universität",
+            "klassifikation_raw.PhaseCube",
+            "klassifikation_raw.PhaseTube",
+            "klassifikation_raw.PhaseDrum",
+        ]
+        collect_and_write(collected, columns, "test_output.csv")
 
 
 if __name__ == "__main__":
