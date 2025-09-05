@@ -11,3 +11,5 @@ requests
 sentence_transformers
 transformers
 ollama
+langchain
+langchain-groq
