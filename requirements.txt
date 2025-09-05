@@ -12,3 +12,5 @@ sentence_transformers
 transformers
 ollama
 spacy==3.7.4
+langchain
+langchain-groq
