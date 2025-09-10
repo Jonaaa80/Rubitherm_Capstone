@@ -20,7 +20,7 @@ SIGN_OFF_REGEX = re.compile(
 
 # Regex to find email headers to determine customer block
 HEADER_REGEX = re.compile(
-    r"^\s*(Von:)",
+    r"^\s*(?:Von:|From:)",
     re.IGNORECASE | re.MULTILINE
 )
 
@@ -149,33 +149,39 @@ def direct_email_extractor(text: str) -> dict:
     first_name, last_name, email = None, None, None
     companies = []
     
-    # Step 1: Extract Name, Email, and Company from 'Von:' line (Highest priority)
-    von_line_match = re.search(r"^\s*Von:\s*(?P<name_part>.+?)?\s*<(?P<email>[^>]+)>", text, re.IGNORECASE | re.MULTILINE)
-    
-    if von_line_match:
-        email = von_line_match.group("email").strip()
-        
+    # Step 1: Extract Name, Email, and Company from 'Von:/From:' line (Highest priority)
+    header_match = re.search(
+        r"^\s*(?:Von:|From:)\s*(?P<name_part>.+?)?\s*<(?P<email>[^>]+)>",
+        text,
+        re.IGNORECASE | re.MULTILINE,
+    )
+
+    if header_match:
+        email = header_match.group("email").strip()
+
         # Split name from "Von: Name <email>"
-        name_part = von_line_match.group("name_part")
+        name_part = header_match.group("name_part")
         if name_part:
             # Clean up the name part and split into first/last name
-            clean_name_part = re.sub(r"\(.*\)|['\"]| - .*", "", name_part).strip()
+            clean_name_part = re.sub(r"\(.*\)|['\"]|\s-\s.*", "", name_part).strip()
+            # Remove trailing commas
+            clean_name_part = re.sub(r",+$", "", clean_name_part)
             name_parts = clean_name_part.split()
             if len(name_parts) >= 2:
                 first_name = name_parts[0]
                 last_name = " ".join(name_parts[1:])
             else:
-                # If only one word in name, assume it's a first name
                 if name_parts:
                     first_name = name_parts[0]
 
-        # Extract company from Von: line, but only if not generic
+        # Extract company from the domain if it's not generic or internal
         domain = email.split('@')[-1]
-        if domain.lower() not in [d.lower() for d in GENERIC_DOMAINS] and "rubitherm" not in domain.lower():
-            companies.append(domain.split('.')[0].replace('-', ' ').replace('_', ' ').title())
-            # For specific cases like mpob.gov.my
-            if 'gov.my' in domain.lower():
-                companies = ['MPOB']
+        if domain:
+            dl = domain.lower()
+            if dl not in [d.lower() for d in GENERIC_DOMAINS] and "rubitherm" not in dl:
+                companies.append(domain.split('.')[0].replace('-', ' ').replace('_', ' ').title())
+                if 'gov.my' in dl:
+                    companies = ['MPOB']
 
 
     # Step 2: Find signature block for other info
@@ -183,11 +189,41 @@ def direct_email_extractor(text: str) -> dict:
     signature_lines = get_signature_block(lines)
     signature_text = "\n".join(signature_lines)
 
+    # Fallback: if no explicit first/last name yet, try NER on signature
+    if not first_name and not last_name and signature_text:
+        doc_sig = nlp(signature_text)
+        persons = [ent.text.strip() for ent in doc_sig.ents if ent.label_ in ("PERSON", "PER")]
+        if persons:
+            # Heuristic: take the first person-like string that isn't a role line
+            for cand in persons:
+                if any(w.lower() in cand.lower() for w in ("gmbh", "inc", "corp", "director", "manager", "geschaeftsfuehrer", "geschäftsführer")):
+                    continue
+                parts = cand.split()
+                if len(parts) >= 2:
+                    first_name, last_name = parts[0], " ".join(parts[1:])
+                    break
+
     # Step 3: Regex-based extraction (for clear patterns)
-    emails_from_sig = re.findall(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", signature_text)
+    emails_from_sig = [
+        e for e in re.findall(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", signature_text)
+        if not re.search(r"\.(?:png|jpg|jpeg|gif)@", e, re.IGNORECASE) and not e.lower().startswith("image")
+    ]
+    raw_websites = re.findall(r"(?:https?://[^\s<>]+|www\.[^\s<>]+)", signature_text)
+    websites = []
+    for w in raw_websites:
+        w = w.strip().strip('>')
+        # If in format www.example.com<https://example.com/>, take the https part
+        if '<' in w:
+            parts = w.split('<')
+            # choose the part that looks like it has a scheme
+            https_parts = [p for p in parts if p.startswith(('http://', 'https://'))]
+            w = https_parts[0] if https_parts else parts[0]
+        if w.startswith('www.'):
+            w = 'http://' + w
+        if w not in websites:
+            websites.append(w)
     phones = re.findall(r"(?:\+?\d[\d\s\-\(\)]{6,}\d)", signature_text)
     phones = [re.sub(r"\s{2,}", " ", p).strip() for p in phones]
-    websites = re.findall(r"(?:https?://[^\s]+|www\.[^\s]+)", signature_text)
 
     # Step 4: Fallback company name from signature block if not found in Von line
     if not companies:
@@ -298,6 +334,9 @@ def extract_email_data(text: str) -> dict:
         result["extracted_data"]["company"] = [result["extracted_data"]["company"]]
     if isinstance(result["extracted_data"].get("email"), str):
         result["extracted_data"]["email"] = [result["extracted_data"]["email"]]
+
+    result["extracted_data"].setdefault("first_name", None)
+    result["extracted_data"].setdefault("last_name", None)
     
     return result
 
@@ -321,7 +360,7 @@ def process(data: dict, email_obj: Message) -> dict:
 
 
     #extracted_data = extract_email_data(data.get("body", ""))
-    extracted_data = extract_email_data(email_body)
+    extracted_data = extract_email_data(data.get("body", ""))
     
 
 
