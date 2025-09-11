@@ -1,0 +1,43 @@
+
+
+
+# macOS / system
+.DS_Store
+
+# Git and VCS
+.git
+.gitignore
+
+# Python environments and caches
+.venv
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# VS Code and editor settings
+.vscode
+
+# Environment files
+.env
+
+# Data, models, images, and docs (exclude from image)
+data
+doc
+images
+models
+
+# Jupyter notebooks and tests not needed inside image
+*.ipynb
+test_Bert_jona.ipynb
+
+# Other unnecessary files
+Makefile
+README_ARCHITECTURE
+README_EXTRCTN.md
+README.md
+requirements_windows.txt
+
+# Email files
+*.eml
+*e.eml

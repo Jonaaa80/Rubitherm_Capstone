@@ -13,3 +13,4 @@ transformers
 ollama
 langchain
 langchain-groq
+openai

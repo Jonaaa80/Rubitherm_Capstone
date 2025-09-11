@@ -1,6 +1,8 @@
 from .utils.email_parser import parse_email_body
 from .imap_worker import IMAPPoller
-from .pipeline import ai_web, ai_extract_crm, ai_predict_intention, ai_controller, ai_email_parser
+from .pipeline import ai_web, ai_extract_crm, ai_predict_intention, ai_controller
+#from .pipeline import ai_email_parser_openai_key
+from .pipeline import ai_email_parser
 from .pipeline import ai_spacy_ner_email_parser
 from .utils.email_utils import extract_bodies, get_effective_message 
 
@@ -25,6 +27,7 @@ def handle_email(email_obj):
     data["parsed"] = parsed
 
     # Pipeline
+    #data = ai_email_parser_openai_key.process(data, original)
     data = ai_email_parser.process(data, original)
     data = ai_spacy_ner_email_parser.process(data, original)
     data = ai_extract_crm.process(data, original)
