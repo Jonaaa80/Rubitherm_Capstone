@@ -83,20 +83,105 @@ def is_person_exist_in_crm(email, first_name, last_name):
 
     return False
 
+# TODO
 
-def create_person_in_crm(email, first_name, last_name, gender):
-    url = f"{CSCRM_SERVER}/api/people"
-    params = {'email': email, 'first_name': first_name,
-              "name": last_name, 'gender': gender}
+
+def update_email(person_id, email):
+    url = f"{CSCRM_SERVER}/api/people/" + \
+        str(person_id) + "/contact_details"
+    params = {
+        "includes": "positions companies deals",
+        "methods": "responsible_user_natural_name salutation_official",
+        "no_log": "true"
+    }
+    payload_tel = {
+        "email": {
+            "attachable_type": "Person",
+            "attachable_id": 0,
+            "atype": "office",
+            "name": email
+        }
+    }
+
     for headers in HEADER_VARIANTS:
         try:
-            resp = requests.post(url, headers=headers, params=params)
+            resp = requests.post(url, headers=headers,
+                                 params=params, json=payload_tel)
+            return resp.status_code == 201
         except requests.RequestException as e:
             raise RuntimeError(f"Network error calling {url}: {e}") from e
-        if resp.status_code == 200 and len(resp.json()) > 0:
-            return True
-
     return False
+
+# TODO
+
+
+def update_tel(person_id, tel):
+    url = f"{CSCRM_SERVER}/api/people/" + \
+        str(person_id) + "/contact_details"
+    params = {
+        "includes": "positions companies deals",
+        "methods": "responsible_user_natural_name salutation_official",
+        "no_log": "true"
+    }
+    payload_tel = {
+        "tel": {
+            "attachable_type": "Person",
+            "attachable_id": 0,
+            "atype": "office",
+            "name": tel
+        }
+    }
+
+    for headers in HEADER_VARIANTS:
+        try:
+            resp = requests.post(url, headers=headers,
+                                 params=params, json=payload_tel)
+            return resp.status_code == 201
+        except requests.RequestException as e:
+            raise RuntimeError(f"Network error calling {url}: {e}") from e
+    return False
+
+# add a new person details, first it will check if existance of person in crm before than only create
+
+
+def create_person_in_crm(email, first_name, last_name, gender, salutation="Mr", title="", tel="121212112"):
+    if is_person_exist_in_crm(email, first_name, last_name):
+        print(
+            f"Person with name: {first_name} {last_name} and email {email} exist in CRM")
+        return
+
+    url = f"{CSCRM_SERVER}/api/people"
+
+    params = {
+        "includes": "positions companies deals",
+        "methods": "responsible_user_natural_name salutation_official",
+        "no_log": "true"
+    }
+
+    payload = {
+        "person": {
+            "country_code": "de",
+            "salutation": salutation,
+            "title": title,
+            "gender": gender,
+            "first_name": first_name,
+            "name": last_name,
+            'email': email
+        }
+    }
+    # response = requests.post(url, headers=headers, params=params, json=payload)
+    for headers in HEADER_VARIANTS:
+        try:
+            resp = requests.post(url, headers=headers,
+                                 params=params, json=payload)
+            print("Status:", resp.status_code)
+            resp_out = resp.json()
+            person_id = resp_out["person"]["id"]
+            update_email(person_id, email)
+            update_tel(person_id, tel)
+            break
+        except requests.RequestException as e:
+            raise RuntimeError(f"Network error calling {url}: {e}") from e
 
 
 if __name__ == "__main__":
@@ -109,7 +194,7 @@ if __name__ == "__main__":
     else:
         print(data)
 
-    email = 'carole.allal@emballiso.com'
+    email = 'mahegupt@gmail.com'
     print(f"\n Does Email id {email} ", is_email_exist_in_crm(email))
     email = 'mahesh@luxhaus.de'
     print(f"\n Does Email id {email} ", is_email_exist_in_crm(email))
@@ -129,9 +214,15 @@ if __name__ == "__main__":
     print(f"\n Does the Person: {first_name},{last_name} with email {email} exist in CRM?",
           is_person_exist_in_crm(email, first_name, last_name))
 
-    # Test to add a new person details.
+    # Test to add a new person..
+    print("Create a new person\n\n")
     create_person_in_crm("mahegupt@gmail.com", "Mahesh", "Gupta", "Male")
 
-    email = 'mahesh@gmail.com'
+    email = 'mahegupt@gmail.com'
     print(
-        f"\nAfter creating new entry, Does Email id {email} ", is_email_exist_in_crm(email))
+        f"\nDoes Email id {email} exists in CRM", is_email_exist_in_crm(email))
+
+    first_name = 'Mahesh'
+    last_name = "Gupta"
+    print(f"\nDoes Person {first_name},{last_name} exist in CRM:",
+          is_person_name_exist_in_crm(first_name, last_name))
