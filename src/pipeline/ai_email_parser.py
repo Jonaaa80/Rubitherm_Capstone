@@ -161,10 +161,13 @@ def process(data: dict, email_obj: Message) -> dict:
         return data
 
     # Build full prompt (do NOT force a recipient; only include if you explicitly want to guide the model)
-    recipient = None  # optionally set from headers if desired
-    full_prompt = f"{base_prompt}\n\nEmail text:\n{body_text}"
-    if recipient:
-        full_prompt += f"\n\nfor_recipient: {recipient}"
+    # Extract and add FROM_ADDRESS from the email headers
+    from_address = email_obj.get('From')
+    if from_address:
+        full_prompt = f"{base_prompt}\n\nFROM_ADDRESS: {from_address}\n\nEmail text:\n{body_text}"
+    else:
+        full_prompt = f"{base_prompt}\n\nEmail text:\n{body_text}"
+
     debug["final_prompt_len"] = len(full_prompt)
     debug["api_url"] = os.getenv("OLLAMA_API_URL", "http://127.0.0.1:11434/api/generate")
 

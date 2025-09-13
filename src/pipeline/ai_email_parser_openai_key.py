@@ -96,11 +96,19 @@ def process(data: dict, email_obj: Message) -> dict:
         data["llm_debug"] = debug
         return data
 
-    # Build full prompt (do NOT force a recipient; only include if you explicitly want to guide the model)
-    recipient = None  # optionally set from headers if desired
-    full_prompt = f"{base_prompt}\n\nEmail text:\n{body_text}"
-    if recipient:
-        full_prompt += f"\n\nfor_recipient: {recipient}"
+    # Build full prompt and include explicit FROM_ADDRESS when available
+    from_address = None
+    try:
+        from_header = email_obj.get('From')
+        if from_header:
+            from_address = from_header
+    except Exception:
+        from_address = None
+    if from_address:
+        full_prompt = f"{base_prompt}\n\nFROM_ADDRESS: {from_address}\n\nEmail text:\n{body_text}"
+    else:
+        full_prompt = f"{base_prompt}\n\nEmail text:\n{body_text}"
+    debug["from_address"] = from_address
     debug["final_prompt_len"] = len(full_prompt)
 
     try:

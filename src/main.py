@@ -26,16 +26,25 @@ def handle_email(email_obj):
     parsed = parse_email_body(body)
     data["parsed"] = parsed
 
-    # Pipeline
-    #data = ai_email_parser_openai_key.process(data, original)
-    data = ai_email_parser.process(data, original)
-    data = ai_spacy_ner_email_parser.process(data, original)
-    data = ai_extract_crm.process(data, original)
-    data = ai_predict_intention.process(data, original)
-    data = ai_web.process(data, original)
+    # Defensive pipeline execution: keep previous data if a step returns None or errors
+    def _run_step(mod, payload, email):
+        try:
+            res = mod.process(payload, email)
+            if isinstance(res, dict) and res:
+                return res
+            return payload
+        except Exception:
+            return payload
 
-    # Final
-    ai_controller.handle(data, original)
+    # Pipeline (order matters)
+    data = _run_step(ai_email_parser, data, original)
+    data = _run_step(ai_spacy_ner_email_parser, data, original)
+    data = _run_step(ai_extract_crm, data, original)
+    data = _run_step(ai_predict_intention, data, original)
+    data = _run_step(ai_web, data, original)
+
+    # Final: controller returns enriched data
+    return ai_controller.handle(data, original)
 
 def main():
     poller = IMAPPoller()

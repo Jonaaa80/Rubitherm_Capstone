@@ -1,8 +1,6 @@
 import unittest
 from pathlib import Path
 from email import message_from_binary_file
-from contextlib import redirect_stdout
-from io import StringIO
 import json
 
 from src.main import handle_email
@@ -10,7 +8,6 @@ from src.utils.data_collector import collect_and_write
 
 
 EMAIL_DIR = Path(__file__).parent / "emails"  # src/tests/emails
-MARKER = "=== AI CONTROLLER RESULT ==="
 
 
 def load_eml(path: Path):
@@ -19,16 +16,15 @@ def load_eml(path: Path):
 
 
 def run_pipeline_and_capture(email_obj):
-    buf = StringIO()
-    with redirect_stdout(buf):
-        handle_email(email_obj)
-    out = buf.getvalue()
-    if MARKER not in out:
-        raise AssertionError(f"Controller-Ausgabe nicht gefunden. Erwartet Marker: {MARKER}")
-    json_part = out.split(MARKER, 1)[1].strip()
-    data = json.loads(json_part) 
-    print(json.dumps(data, indent=2, ensure_ascii=False))
-    return json.loads(json_part)
+    data = handle_email(email_obj)
+    if data is None:
+        raise AssertionError("handle_email() hat None zurückgegeben – erwartet wurde ein Dictionary.")
+    # Pretty print to stdout for visibility during tests (optional)
+    try:
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+    except TypeError as e:
+        raise AssertionError(f"Ergebnis ist nicht JSON-serialisierbar: {e}\nObjekt: {data}")
+    return data
 
 
 def deep_get(d, dotted_key, default=None):

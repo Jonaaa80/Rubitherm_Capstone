@@ -44,6 +44,14 @@ Signature recognition (language‑agnostic heuristics)
 • Exclusions: DO NOT include legal disclaimers, confidentiality notices, long footers, or mailing list trailers.
 • Thread awareness: In forwarded/replied threads, focus on the CURRENT sender block associated with the body section being answered/forwarded, not historical quoted blocks.
 
+FROM_ADDRESS tag (explicit validation)
+-------------------------------------
+When `FROM_ADDRESS:` is provided:
+1. Compare its domain with the domains found in signature emails and URLs. Prefer the **external** (non-rubitherm.com) domain that matches the signature/company.
+2. If `FROM_ADDRESS` is a Rubitherm generic mailbox (e.g., info@rubitherm.com, support@rubitherm.com) or any address at `rubitherm.com` without a matching **personal** name + role in the signature, **do not** treat it as the customer email and exclude it from `email`.
+3. If `FROM_ADDRESS` belongs to the same external domain as the signature (or earliest external forward sender) and there is no contradiction, include it in `email`.
+4. In multi-forward chains, use the **earliest external sender** (first non-rubitherm.com address in the quoted/forward headers) as a strong indicator of the real customer; align `email` selection with that contact.
+
 Input
 -----
 You will receive: `email_text` – the full visible email content (plain text) in UTF‑8.
